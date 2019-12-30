@@ -4,7 +4,7 @@ This software package is used to solve the problem that the wan port does not re
 ### USAGE:
 #### 1. COMPILE THIS PACKAGE INTO FIRMWARE
 	$cd openwrt_root          #go to your openwrt source root
-	$cd pakcage
+	$cd package
 	$git clone git@github.com:gl-inet/gl-wan-monitor.git
 	$cd ..
 	$make menuconfig
@@ -15,7 +15,7 @@ This software package is used to solve the problem that the wan port does not re
 #### 2. COMPILE A SINGLE PACKAGE
 ##### COMPILE
 	$cd openwrt_root          #go to your openwrt source root
-	$cd pakcage
+	$cd package
 	$git clone git@github.com:gl-inet/gl-wan-monitor.git
 	$cd ..
 	$make menuconfig
