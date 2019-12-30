@@ -79,6 +79,12 @@ get_model() {
 model=$(get_model)
 counter=0
 
+if [ -e /usr/bin/gl_monitor ] && [ -e /etc/init.d/gl_monitor ];then
+	while [ true ];do
+		sleep 60
+	done
+fi
+
 while [ true ]; do
 	let counter=counter+1
     
