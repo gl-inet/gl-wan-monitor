@@ -1,0 +1,113 @@
+#!/bin/sh
+
+cur_status="down"
+port_status="down"
+
+# $1: port 
+# $2: ifname
+wan_event() {
+	local port=${1#port}
+	local dev=$2
+	local proto
+
+	[ -z "$dev" ] && return 0
+
+	if [ -n "$(swconfig dev switch0 port $port show | grep link:up)" ]; then
+		cur_status="up"
+	else
+		cur_status="down"
+	fi
+
+	if [ "$cur_status" = "up" -a "$port_status" = "down" ]; then
+		port_status="up"
+	elif [ "$cur_status" = "down" -a "$port_status" = "up" ]; then
+		proto=$(uci get network.wan.proto)
+		if [ ! "$proto" = "static" ];then
+			if [ "$model" = "mt300n-v2" ];then
+				ifdown wan && ifup wan
+			else
+				ip link set $dev down && ip link set $dev up
+			fi
+		fi
+		port_status="down"
+	fi
+}
+
+v2counter=0
+v2need_reload=yes
+check_mt300n_v2_switch() {
+	local curr_stat=$(swconfig dev switch0 port 0 show | grep link:up)
+
+	if [ -z "$curr_stat" ]; then
+		v2counter=$((v2counter+1))
+	else
+		v2counter=0
+		v2need_reload="yes"
+	fi
+
+	if [ "$v2counter" = "3" -a "$v2need_reload" = "yes" ]; then
+		swconfig dev switch0 load network
+		v2need_reload="no"
+	fi
+
+	if [ "$v2counter" = "4" ]; then
+		v2counter=0
+	fi
+}
+
+board_name() {
+	[ -e /tmp/sysinfo/board_name ] && cat /tmp/sysinfo/board_name || echo "generic"
+}
+
+get_model() {
+	local board boardname
+
+	. /lib/functions.sh
+	
+	board=$(board_name)
+	boardname="${board#*-}"
+
+	[ -n "$boardname" ] || {
+		loger "Unsupported model (model not in support-list)"
+		echo ""
+		return
+	}
+	
+	echo "$boardname"
+}
+
+model=$(get_model)
+counter=0
+
+while [ true ]; do
+	let counter=counter+1
+    
+    [ $counter = 60 ] && counter=0
+
+	case "$model" in
+	"ar750s")
+		wan_event "port1" "eth0.2"
+		;;
+	"x1200" )
+		wanflag=`uci get glconfig.general.wan2lan 2>/dev/null`
+		if [ "$wanflag" != "1" ];then
+			wan_event "port5" "eth0.2"
+		fi
+		;;
+	"n300"|\
+	"vixmini")
+		wan_event "port0" "eth0"
+		;;
+	"mt300n-v2")
+		wan_event "port0" "eth0.2"
+		check_mt300n_v2_switch
+		;;
+	"mt300a"|\
+	"mt300n")
+		wan_event "port0" "eth0.2"
+		;;
+	*)
+		;;
+	esac
+	sleep 3
+done
